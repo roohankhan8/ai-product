@@ -293,3 +293,10 @@ git ls-files
 ```
 
 Use the setup and development commands above to install and run the current components.
+
+## RAG evaluation
+
+Run `python scripts/evaluate_rag.py` from the repository root. It reads the
+versioned `evals/rag-baseline-v1.json` dataset and reports hit rate, recall, MRR,
+citation coverage, and average retrieval latency. Hybrid search and reranking
+remain deferred until this baseline identifies a measurable retrieval gap.

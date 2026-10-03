@@ -1,0 +1,46 @@
+{
+  "version": "rag-baseline-v1",
+  "description": "Small synthetic retrieval set for the local baseline.",
+  "documents": [
+    {
+      "id": "hr-handbook",
+      "text": "Employees receive twenty paid vacation days each calendar year. Vacation requests go to the manager."
+    },
+    {
+      "id": "refund-policy",
+      "text": "Customers may request a refund within thirty days of purchase. Digital goods are refundable only if unused."
+    },
+    {
+      "id": "security-guide",
+      "text": "Production secrets must be stored in the managed secret store. Never commit credentials to source control."
+    }
+  ],
+  "queries": [
+    {
+      "id": "vacation-days",
+      "text": "How many paid vacation days does an employee receive?",
+      "relevant_documents": [
+        "hr-handbook"
+      ]
+    },
+    {
+      "id": "refund-window",
+      "text": "How long does a customer have to ask for a refund?",
+      "relevant_documents": [
+        "refund-policy"
+      ]
+    },
+    {
+      "id": "secret-storage",
+      "text": "Where should production secrets be stored?",
+      "relevant_documents": [
+        "security-guide"
+      ]
+    },
+    {
+      "id": "unknown",
+      "text": "What is the office dress code?",
+      "relevant_documents": []
+    }
+  ]
+}

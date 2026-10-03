@@ -7,6 +7,7 @@ the embedding and search seams with pgvector or a hosted service after evaluatio
 import re
 import unicodedata
 import uuid
+from hashlib import blake2b
 from dataclasses import dataclass
 from math import sqrt
 from pathlib import PurePath
@@ -63,7 +64,8 @@ def chunk_text(text: str, size: int = 800, overlap: int = 120) -> list[str]:
 def embed(text: str) -> list[float]:
     vector = [0.0] * VECTOR_SIZE
     for word in WORD_RE.findall(text.casefold()):
-        vector[hash(word) % VECTOR_SIZE] += 1.0
+        digest = blake2b(word.encode("utf-8"), digest_size=4).digest()
+        vector[int.from_bytes(digest, "big") % VECTOR_SIZE] += 1.0
     norm = sqrt(sum(value * value for value in vector)) or 1.0
     return [value / norm for value in vector]
 
