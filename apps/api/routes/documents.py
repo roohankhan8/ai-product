@@ -14,8 +14,8 @@ from core.config import get_settings
 from core.dependencies import get_current_principal
 from core.errors import APIError
 from database import get_db_session
-from models import AuditEvent, Document
-from ingestion import create_or_reset_job, enqueue
+from models import AuditEvent, Document, IngestionJob
+from ingestion import create_or_reset_job, enqueue, remove_queued_job
 from storage import path_for, remove_file, save_bytes
 
 router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
@@ -260,7 +260,13 @@ async def delete_document(
     session: AsyncSession = Depends(get_db_session),
 ) -> None:
     document = await _get_document(document_id, principal, session)
+    job = await session.scalar(select(IngestionJob).where(IngestionJob.document_id == document.id))
     session.add(_audit(principal, request, "document.deleted", document.id))
     await session.delete(document)
     await session.commit()
+    if job is not None:
+        try:
+            await remove_queued_job(job.id)
+        except Exception:
+            pass
     remove_file(document.storage_key)

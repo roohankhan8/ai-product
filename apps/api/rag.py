@@ -21,6 +21,11 @@ from storage import path_for
 
 VECTOR_SIZE = 256
 WORD_RE = re.compile(r"[\w']+", re.UNICODE)
+STOP_WORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "do", "does", "for", "from",
+    "have", "how", "i", "in", "is", "it", "of", "on", "or", "the", "to", "what",
+    "where", "which", "who", "with", "you", "your",
+}
 
 
 @dataclass(frozen=True)
@@ -70,6 +75,13 @@ def embed(text: str) -> list[float]:
     return [value / norm for value in vector]
 
 
+def meaningful_terms(text: str) -> set[str]:
+    return {
+        word for word in WORD_RE.findall(text.casefold())
+        if word not in STOP_WORDS and len(word) > 2
+    }
+
+
 async def index_document(session: AsyncSession, document: Document) -> int:
     text = parse_text(document.original_filename, path_for(document.storage_key).read_bytes())
     chunks = chunk_text(text)
@@ -91,8 +103,11 @@ async def retrieve(session: AsyncSession, tenant_id: uuid.UUID, query: str, top_
     query_vector = embed(query)
     rows = await session.scalars(select(DocumentChunk).where(DocumentChunk.tenant_id == tenant_id))
     scored = []
+    query_terms = meaningful_terms(query)
     for chunk in rows:
+        if not query_terms.intersection(meaningful_terms(chunk.content)):
+            continue
         score = sum(a * b for a, b in zip(query_vector, chunk.embedding))
-        if score > 0:
+        if score >= 0.18:
             scored.append(RetrievedChunk(chunk, score))
     return sorted(scored, key=lambda item: item.score, reverse=True)[:top_k]

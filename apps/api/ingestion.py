@@ -26,6 +26,16 @@ async def enqueue(job_id: uuid.UUID) -> None:
         await client.aclose()
 
 
+async def remove_queued_job(job_id: uuid.UUID) -> None:
+    """Remove queued copies; the worker also safely ignores missing jobs."""
+    client = redis_client()
+    payload = json.dumps({"job_id": str(job_id)})
+    try:
+        await client.lrem(QUEUE, 0, payload)
+    finally:
+        await client.aclose()
+
+
 async def create_or_reset_job(session: AsyncSession, document: Document) -> IngestionJob:
     job = await session.scalar(
         select(IngestionJob).where(IngestionJob.document_id == document.id)

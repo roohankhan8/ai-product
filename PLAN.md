@@ -31,7 +31,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 ## Phases and acceptance criteria
 
-### 0. Make the starter reliable
+### 0. Make the starter reliable X
 
 **Scope:** Bring the existing API, web app, database, and Redis starters into agreement.
 
@@ -44,7 +44,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Done when:** A new contributor can follow the setup guide, start Postgres/Redis, run both apps, and verify the health endpoint without guessing configuration.
 
-### 1. Python foundation and application boundaries
+### 1. Python foundation and application boundaries X
 
 **Scope:** Establish a clear, testable Python structure before adding product behavior.
 
@@ -56,7 +56,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Done when:** Domain/service tests run without a database or network, and the app has a documented local run and check workflow.
 
-### 2. Relational persistence and migrations
+### 2. Relational persistence and migrations X
 
 **Scope:** Add PostgreSQL persistence for the first product entities.
 
@@ -69,7 +69,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Done when:** A clean database can be created with migrations, repositories persist and retrieve records, and test data is isolated from local development data.
 
-### 3. Identity, authentication, and tenant isolation
+### 3. Identity, authentication, and tenant isolation X
 
 **Scope:** Establish who is making each request and which tenant owns the data.
 
@@ -82,7 +82,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Done when:** Automated tests prove a user cannot list, read, modify, or infer another tenant's records.
 
-### 4. First operational API slice
+### 4. First operational API slice X
 
 **Scope:** Implement the basic user and document metadata workflows without AI processing.
 
@@ -94,7 +94,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Done when:** The API supports a complete authenticated CRUD path for the first selected resource, with tenant tests and documented API behavior.
 
-### 5. File upload and document lifecycle
+### 5. File upload and document lifecycle X
 
 **Scope:** Accept documents safely and track processing state.
 
@@ -107,7 +107,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Done when:** An authorized user can upload a permitted file, see its state, and cannot access another tenant's file; invalid and oversized uploads are rejected safely.
 
-### 6. LLM provider boundary and basic chat
+### 6. LLM provider boundary and basic chat X
 
 **Scope:** Deliver a simple, observable model call before adding retrieval or agents.
 
@@ -120,7 +120,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Done when:** A user can send a message and receive a model response; tests run without a real API key, and usage/failure details are traceable.
 
-### 7. Document parsing and baseline RAG
+### 7. Document parsing and baseline RAG X
 
 **Scope:** Turn uploaded text documents into searchable evidence and cited answers.
 
@@ -133,7 +133,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Done when:** Answers cite the chunks that support them, retrieval is tenant-filtered at the data boundary, and tests include empty, malformed, and cross-tenant cases.
 
-### 8. RAG quality and evaluation
+### 8. RAG quality and evaluation X
 
 **Scope:** Improve retrieval through measured iterations.
 
@@ -170,7 +170,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Done when:** A side-effecting action cannot execute without a valid approval, and duplicate requests do not duplicate the effect.
 
-### 11. Redis, workers, and durable ingestion
+### 11. Redis, workers, and durable ingestion X
 
 **Scope:** Move slow document processing out of web requests.
 
@@ -182,7 +182,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Done when:** Upload returns promptly, job progress is visible, retries do not create duplicate chunks, and failures are inspectable and recoverable.
 
-### 12. Next.js product UI
+### 12. Next.js product UI X
 
 **Scope:** Build the smallest usable UI over stable API contracts.
 
