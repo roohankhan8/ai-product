@@ -1,4 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from database import get_db_session
 
 router = APIRouter(tags=["health"])
 
@@ -10,6 +15,12 @@ async def health() -> dict[str, str]:
 
 
 @router.get("/ready")
-async def readiness() -> dict[str, str]:
-    """Report process readiness; external dependency checks are not configured yet."""
+async def readiness(
+    session: AsyncSession = Depends(get_db_session),
+) -> dict[str, str]:
+    """Report readiness after confirming PostgreSQL is reachable."""
+    try:
+        await session.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Database is unavailable") from exc
     return {"status": "ready"}

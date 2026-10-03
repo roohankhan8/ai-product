@@ -2,6 +2,8 @@ import logging
 import re
 import time
 import uuid
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -9,26 +11,37 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.responses import Response
 
-from apps.api.exception_handlers import (
+from core.config import get_settings
+from core.errors import APIError
+from core.logging import configure_logging
+from core.request_context import request_id_context
+from database import dispose_database
+from exception_handlers import (
     api_error_handler,
     http_error_handler,
     unhandled_error_handler,
     validation_error_handler,
 )
-from apps.api.routes.health import router as health_router
-from apps.api.core.config import get_settings
-from apps.api.core.errors import APIError
-from apps.api.core.logging import configure_logging
-from apps.api.core.request_context import request_id_context
+from routes.health import router as health_router
 
 settings = get_settings()
 configure_logging(settings.log_level)
 logger = logging.getLogger(__name__)
 
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
+    try:
+        yield
+    finally:
+        await dispose_database()
+
+
 app = FastAPI(
     title="AI Operations API",
     description="Backend API for the AI Operations Platform.",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_exception_handler(APIError, api_error_handler)

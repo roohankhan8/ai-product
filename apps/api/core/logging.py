@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timezone
 from logging.config import dictConfig
 
-from apps.api.core.request_context import request_id_context
+from core.request_context import request_id_context
 
 
 class JsonFormatter(logging.Formatter):

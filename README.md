@@ -8,6 +8,7 @@ The project is being implemented in stages. See [`IDEA.md`](IDEA.md) for the pro
 
 - FastAPI starter with `/health` and `/ready` endpoints
 - PostgreSQL 16 and Redis 7 in Docker Compose
+- Async SQLAlchemy persistence and an initial Alembic schema migration
 - Next.js starter app
 - Alembic migration scaffolding
 
@@ -34,7 +35,8 @@ Activate the environment with `.venv\Scripts\Activate.ps1` in Windows PowerShell
 
 ```bash
 pip install -e ".[dev]"
-uvicorn app.main:app --reload --port 8000
+alembic upgrade head
+uvicorn main:app --reload --port 8000
 ```
 
 In a third terminal, install and run the web app:

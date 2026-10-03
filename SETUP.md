@@ -90,16 +90,17 @@ macOS/Linux:
 source .venv/bin/activate
 ```
 
-Install the backend dependencies once `pyproject.toml` exists:
+Install the backend dependencies:
 
 ```bash
 pip install -e ".[dev]"
+alembic upgrade head
 ```
 
 Run the API locally:
 
 ```bash
-uvicorn app.main:app --reload --port 8000
+uvicorn main:app --reload --port 8000
 ```
 
 Useful endpoints should include:
@@ -126,7 +127,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 ## Environment variables
 
-Create a local `.env` file from `.env.example` when that template is added. Keep secrets out of Git.
+Create `apps/api/.env` from `apps/api/.env.example` if you need local overrides. The API reads `.env` from its working directory; keep it out of Git.
 
 Suggested initial variables:
 
@@ -201,7 +202,14 @@ docker --version
 docker compose version
 ```
 
-When `.env.example` is added, create the local environment file. Use `cp .env.example .env` on macOS/Linux or Git Bash, and `Copy-Item .env.example .env` in Windows PowerShell. Never commit `.env` or real API keys.
+Create the API's local environment file from the repository root when you need to override defaults:
+
+```bash
+cp apps/api/.env.example apps/api/.env      # macOS/Linux/Git Bash
+Copy-Item apps/api/.env.example apps/api/.env  # Windows PowerShell
+```
+
+Never commit `.env` or real API keys.
 
 ## Development workflow
 
@@ -221,7 +229,7 @@ Activate the backend environment in Windows PowerShell with `.venv\Scripts\Activ
 ```bash
 pip install -e ".[dev]"
 alembic upgrade head
-uvicorn app.main:app --reload --port 8000
+uvicorn main:app --reload --port 8000
 ```
 
 In a third terminal, start the web app:
@@ -236,13 +244,13 @@ Use `npm install` only when intentionally changing dependencies and regenerating
 
 Check the API at `http://localhost:8000/health`, `http://localhost:8000/ready`, and `http://localhost:8000/docs`. Stop local services with `docker compose down`.
 
-## Current scaffold check
+## Checkout information
 
-Until the API, frontend, and Compose files are added, validate the checkout with:
+The API, frontend starter, and local Compose services are present. To inspect local changes and tracked files:
 
 ```bash
 git status
 git ls-files
 ```
 
-Do not expect `pytest`, `uvicorn`, `npm run dev`, or `docker compose up` to work until their corresponding project files have been added.
+Use the setup and development commands above to install and run the current components.

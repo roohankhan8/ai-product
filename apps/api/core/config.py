@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     app_env: Literal["development", "test", "staging", "production"] = "development"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
-    database_url: str = "postgresql://devuser:devpassword@localhost:5433/devdb"
+    database_url: str = "postgresql+asyncpg://devuser:devpassword@localhost:5433/devdb"
     redis_url: str = "redis://localhost:6379/0"
 
 

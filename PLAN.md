@@ -10,9 +10,9 @@ The architecture should grow from a modular FastAPI application and Next.js UI. 
 
 ## Current repository baseline
 
-- `apps/api/app/main.py` exposes FastAPI `/health` and `/ready` endpoints.
-- `apps/api/pyproject.toml` defines the API package and initial runtime/development dependencies.
-- `apps/api/alembic.ini` and `apps/api/alembic/` provide an Alembic starting point.
+- `apps/api/main.py` exposes FastAPI `/health` and `/ready` endpoints; `core/` and `routes/` separate shared runtime concerns and HTTP routes.
+- `apps/api/pyproject.toml` defines the API dependencies, including async SQLAlchemy, Alembic, asyncpg, and psycopg for migrations.
+- `apps/api/models.py`, `database.py`, and `alembic/versions/` define the initial relational schema, async session setup, and reversible migration.
 - `docker-compose.yml` starts PostgreSQL 16 and Redis 7. PostgreSQL is exposed on host port `5433`.
 - `apps/web/` contains a Next.js starter application and npm lockfile.
 - `IDEA.md` describes the target system, learning sequence, and technology areas.
@@ -48,7 +48,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Scope:** Establish a clear, testable Python structure before adding product behavior.
 
-- Organize `apps/api/app/` into API, core/configuration, domain, services, repositories, and infrastructure modules as needed.
+- Keep `apps/api/` flat for the current small service (`main.py`, `core/`, `routes/`, and focused persistence modules); add domain, services, or repositories when behavior needs those boundaries.
 - Define typed settings and structured logging; validate required settings at startup.
 - Add error handling, request IDs, and a consistent API response/error convention.
 - Keep domain logic independent of FastAPI and persistence.
@@ -60,7 +60,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Scope:** Add PostgreSQL persistence for the first product entities.
 
-- Select SQLAlchemy 2.x and async or synchronous access, document the tradeoff, and use one approach consistently.
+- Use SQLAlchemy 2.x async sessions with asyncpg for API requests; use psycopg synchronously for Alembic commands so migrations remain a normal one-shot CLI process.
 - Configure database sessions and lifecycle handling.
 - Design initial entities: tenant, user, document metadata, conversation, message, task, and audit event. Add only entities needed by the first vertical slice.
 - Implement Alembic metadata wiring, an initial migration, and migration checks in CI.
