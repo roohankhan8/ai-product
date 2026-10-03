@@ -17,7 +17,7 @@ The architecture should grow from a modular FastAPI application and Next.js UI. 
 - `apps/web/` contains a Next.js starter application and npm lockfile.
 - `IDEA.md` describes the target system, learning sequence, and technology areas.
 
-Before implementing database features, align `SETUP.md`, local environment examples, and the actual Compose ports and credentials. Keep local secrets out of version control.
+The Postgres host mapping to port `5433` is intentional and should be preserved. Keep setup examples and environment defaults aligned with the Compose credentials and database name; keep local secrets out of version control.
 
 ## Delivery rules
 
@@ -35,7 +35,7 @@ Before implementing database features, align `SETUP.md`, local environment examp
 
 **Scope:** Bring the existing API, web app, database, and Redis starters into agreement.
 
-- Align documented and actual ports, credentials, commands, and environment variable names.
+- Preserve the intentional Postgres host port `5433`; align credentials, commands, and environment variable names across setup docs and Compose.
 - Add an API environment template and ensure local secrets are ignored by Git.
 - Make the API installable from `apps/api` and ensure the documented Uvicorn command works.
 - Add basic API tests for `/health` and `/ready`.
@@ -270,7 +270,7 @@ Before calling a phase complete:
 
 ## Immediate next work
 
-1. Reconcile `SETUP.md` and environment defaults with the Compose Postgres port (`5433`) and credentials.
+1. Keep Postgres on the intentional host port (`5433`) and align `SETUP.md` and environment defaults with the Compose credentials.
 2. Confirm the API installs and starts from `apps/api`, and the web app installs from its lockfile.
 3. Add tests for the existing health endpoints and wire a minimal CI check.
 4. Implement typed configuration and establish the persistence choice before adding database models.

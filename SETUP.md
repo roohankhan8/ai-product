@@ -134,7 +134,7 @@ Suggested initial variables:
 APP_ENV=development
 LOG_LEVEL=INFO
 
-DATABASE_URL=postgresql+asyncpg://app:app@localhost:5433/ai_operations
+DATABASE_URL=postgresql+asyncpg://devuser:devpassword@localhost:5433/devdb
 REDIS_URL=redis://localhost:6379/0
 
 LLM_API_KEY=replace-me
