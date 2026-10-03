@@ -63,6 +63,19 @@ Start the infrastructure with:
 docker compose up -d postgres redis
 ```
 
+From the repository root on Windows PowerShell, start the local stack with one
+command:
+
+```powershell
+.\scripts\dev.ps1
+```
+
+This starts PostgreSQL and Redis through Compose, then opens API, ingestion
+worker, and Next.js development processes in separate PowerShell windows. Use
+`.\scripts\dev.ps1 -Foreground` to print the three process commands instead.
+The launcher requires `apps/api/.venv`; create it first with
+`cd apps/api; python -m venv .venv` and install the API dependencies there.
+
 Stop it with:
 
 ```bash
@@ -300,3 +313,18 @@ Run `python scripts/evaluate_rag.py` from the repository root. It reads the
 versioned `evals/rag-baseline-v1.json` dataset and reports hit rate, recall, MRR,
 citation coverage, and average retrieval latency. Hybrid search and reranking
 remain deferred until this baseline identifies a measurable retrieval gap.
+
+## Document ingestion worker
+
+Uploads now create a durable ingestion job and return promptly with document
+status `processing`. Start the worker from `apps/api` after Redis and PostgreSQL
+are running:
+
+```bash
+python -m worker
+```
+
+The worker parses, chunks, embeds, and indexes documents. Jobs are idempotent per
+document, retry up to three times with backoff, and become `failed` with an error
+message after terminal failure. `POST /api/v1/documents/{id}/index` safely
+re-enqueues a document for retry or reprocessing.

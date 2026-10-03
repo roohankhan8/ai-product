@@ -8,8 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.auth import Principal, issue_token
 from core.dependencies import get_current_principal
 from core.errors import APIError
+from core.config import get_settings
 from database import get_db_session
-from models import AuditEvent, User
+from models import AuditEvent, Tenant, User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -37,6 +38,20 @@ async def dev_login(
     session: AsyncSession = Depends(get_db_session),
 ) -> TokenResponse:
     user = await session.scalar(select(User).where(User.email == request.email.lower()))
+    if user is None and get_settings().app_env == "development":
+        tenant = await session.scalar(select(Tenant).where(Tenant.slug == "local-workspace"))
+        if tenant is None:
+            tenant = Tenant(name="Local Workspace", slug="local-workspace")
+            session.add(tenant)
+            await session.flush()
+        user = User(
+            tenant_id=tenant.id,
+            email=request.email.lower(),
+            display_name=request.email.split("@", 1)[0],
+            role="owner",
+        )
+        session.add(user)
+        await session.flush()
     if user is None or not user.is_active:
         raise APIError(401, "invalid_credentials", "Invalid credentials")
     session.add(

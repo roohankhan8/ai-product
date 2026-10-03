@@ -15,8 +15,8 @@ from core.dependencies import get_current_principal
 from core.errors import APIError
 from database import get_db_session
 from models import AuditEvent, Document
+from ingestion import create_or_reset_job, enqueue
 from storage import path_for, remove_file, save_bytes
-from rag import index_document
 
 router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
 
@@ -159,9 +159,16 @@ async def upload_document(
     )
     try:
         session.add(document)
+        await session.flush()
+        job = await create_or_reset_job(session, document)
         session.add(_audit(principal, request, "document.uploaded", document_id))
         await session.commit()
         await session.refresh(document)
+        try:
+            await enqueue(job.id)
+        except Exception:
+            # The durable job remains pending and can be re-enqueued by the retry endpoint.
+            pass
     except Exception:
         await session.rollback()
         remove_file(storage_key)
@@ -219,14 +226,13 @@ async def index_uploaded_document(
     session: AsyncSession = Depends(get_db_session),
 ) -> IndexResponse:
     document = await _get_document(document_id, principal, session)
+    job = await create_or_reset_job(session, document)
+    await session.commit()
     try:
-        chunk_count = await index_document(session, document)
-        await session.commit()
-    except APIError:
-        document.status = "failed"
-        await session.commit()
-        raise
-    return IndexResponse(document_id=document.id, chunk_count=chunk_count, status=document.status)
+        await enqueue(job.id)
+    except Exception:
+        pass
+    return IndexResponse(document_id=document.id, chunk_count=0, status=document.status)
 
 
 @router.patch("/{document_id}", response_model=DocumentResponse)

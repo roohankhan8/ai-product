@@ -82,7 +82,14 @@ class GeminiProvider(ChatProvider):
 
 
 def get_chat_provider() -> ChatProvider:
-    provider = get_settings().llm_provider
+    settings = get_settings()
+    provider = settings.llm_provider
+    if (
+        settings.app_env == "development"
+        and provider == "gemini"
+        and (not settings.llm_api_key or settings.llm_api_key == "replace-me")
+    ):
+        return MockChatProvider()
     if provider == "mock":
         return MockChatProvider()
     if provider == "openai_compatible":

@@ -114,6 +114,41 @@ class DocumentChunk(Base):
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
+
+
+class IngestionJob(Base):
+    __tablename__ = "ingestion_jobs"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+    )
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default=text("'pending'")
+    )
+    attempts: Mapped[int] = mapped_column(BigInteger, nullable=False, server_default=text("0"))
+    error_message: Mapped[str | None] = mapped_column(String(1000))
+    available_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now()
+    )
+
+    __table_args__ = (
+        UniqueConstraint("document_id", name="uq_ingestion_jobs_document"),
+        CheckConstraint(
+            "status IN ('pending', 'running', 'retry', 'completed', 'failed')",
+            name="valid_status",
+        ),
+        Index("ix_ingestion_jobs_status_available", "status", "available_at"),
+    )
     document_id: Mapped[uuid.UUID] = mapped_column(
         Uuid, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
     )
