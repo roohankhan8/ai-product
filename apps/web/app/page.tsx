@@ -1,60 +1,31 @@
 "use client";
+/* eslint-disable react-hooks/set-state-in-effect */
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { api } from "./lib/api";
+import { SignIn } from "./components/sign-in";
+import { Workspace } from "./components/workspace";
 
-type Doc = { id: string; original_filename: string; size_bytes: number; status: string; created_at: string };
-type Conversation = { id: string; title: string | null; created_at: string; updated_at: string };
-type Citation = { document_id: string; filename: string; chunk_index: number; score: number };
-type Message = { role: "user" | "assistant"; content: string; citations?: Citation[] };
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-async function api(path: string, options: RequestInit = {}) {
-  const headers = new Headers(options.headers); const token = window.localStorage.getItem("ai_ops_token");
-  if (token) headers.set("Authorization", `Bearer ${token}`);
-  const response = await fetch(`${API}${path}`, { ...options, headers });
-  if (response.status === 401 || response.status === 403) throw new Error("ACCESS_DENIED");
-  if (!response.ok) throw new Error("REQUEST_FAILED");
-  return response.status === 204 ? null : response.json();
+export default function Home() {
+  const [token, setToken] = useState<string | null>(null);
+  useEffect(() => setToken(window.localStorage.getItem("ai_ops_token")), []);
+  if (!token)
+    return (
+      <SignIn
+        onSuccess={(value) => {
+          window.localStorage.setItem("ai_ops_token", value);
+          setToken(value);
+        }}
+      />
+    );
+  return (
+    <Workspace
+      onSignOut={() => {
+        window.localStorage.removeItem("ai_ops_token");
+        setToken(null);
+      }}
+    />
+  );
 }
 
-function Inline({ text }: { text: string }) {
-  return <>{text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^\)]+\))/g).map((token, i) => {
-    if (token.startsWith("**")) return <strong key={i}>{token.slice(2, -2)}</strong>;
-    if (token.startsWith("`")) return <code key={i}>{token.slice(1, -1)}</code>;
-    const link = token.match(/^\[([^\]]+)\]\(([^\)]+)\)$/);
-    return link ? <a key={i} href={link[2]} target="_blank" rel="noreferrer">{link[1]}</a> : <span key={i}>{token}</span>;
-  })}</>;
-}
-
-function Markdown({ content }: { content: string }) {
-  const blocks: React.ReactNode[] = []; let list: { ordered: boolean; items: string[] } | null = null;
-  const flush = () => { if (!list) return; const Tag = list.ordered ? "ol" : "ul"; blocks.push(<Tag key={blocks.length}>{list.items.map((item, i) => <li key={i}><Inline text={item} /></li>)}</Tag>); list = null; };
-  content.split("\n").forEach((line, i) => { const h = line.match(/^(#{1,4})\s+(.+)$/); const bullet = line.match(/^\s*[-*]\s+(.+)$/); const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/); if (h) { flush(); const Tag = `h${h[1].length}` as keyof React.JSX.IntrinsicElements; blocks.push(<Tag key={i}><Inline text={h[2]} /></Tag>); } else if (bullet || ordered) { const isOrdered = Boolean(ordered); if (!list || list.ordered !== isOrdered) { flush(); list = { ordered: isOrdered, items: [] }; } list.items.push((bullet || ordered)![1]); } else if (!line.trim()) flush(); else { flush(); blocks.push(<p key={i}><Inline text={line} /></p>); } }); flush(); return <div className="markdown-content">{blocks}</div>;
-}
-
-export default function Home() { const [token, setToken] = useState<string | null>(null); useEffect(() => setToken(window.localStorage.getItem("ai_ops_token")), []); if (!token) return <SignIn onSuccess={(value) => { window.localStorage.setItem("ai_ops_token", value); setToken(value); }} />; return <Workspace onSignOut={() => { window.localStorage.removeItem("ai_ops_token"); setToken(null); }} />; }
-
-function SignIn({ onSuccess }: { onSuccess: (token: string) => void }) { const [email, setEmail] = useState("user@example.com"); const [error, setError] = useState(""); const [loading, setLoading] = useState(false); const submit = async (e: FormEvent) => { e.preventDefault(); setLoading(true); try { const data = await api("/auth/dev-login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) }); onSuccess(data.access_token); } catch { setError("We couldn’t sign you in. Check the email and try again."); } finally { setLoading(false); } }; return <main className="auth-shell"><section className="auth-card"><div className="brand-mark"><span>✦</span> Northstar</div><p className="eyebrow">AI operations platform</p><h1>Bring your company knowledge into focus.</h1><p className="muted">Search trusted internal documents and ask grounded questions with sources attached.</p><form onSubmit={submit} className="auth-form"><label htmlFor="email">Work email</label><input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /><button className="primary" disabled={loading}>{loading ? "Signing in…" : "Continue →"}</button>{error && <p className="error">{error}</p>}</form></section><aside className="auth-aside"><span className="aside-label">A calmer way to work</span><div className="quote">“The answer is only as useful as the source behind it.”</div><div className="aside-rule" /><p>Keep decisions close to the context that makes them trustworthy.</p></aside></main>; }
-
-function Workspace({ onSignOut }: { onSignOut: () => void }) {
-  const [view, setView] = useState<"chat" | "documents">("chat"); const [docs, setDocs] = useState<Doc[]>([]); const [conversations, setConversations] = useState<Conversation[]>([]); const [conversationId, setConversationId] = useState<string | null>(null); const [error, setError] = useState(""); const [loading, setLoading] = useState(false);
-  const loadDocs = async () => { setLoading(true); try { setDocs(await api("/api/v1/documents")); setError(""); } catch { setError("Couldn’t load documents."); } finally { setLoading(false); } };
-  const loadConversations = async () => { try { setConversations(await api("/api/v1/chat/conversations")); } catch { setError("Couldn’t load conversations."); } };
-  useEffect(() => { loadDocs(); loadConversations(); }, []);
-  const upload = async (file: File) => { const body = new FormData(); body.append("file", file); setLoading(true); try { const doc = await api("/api/v1/documents/upload", { method: "POST", body }); await api(`/api/v1/documents/${doc.id}/index`, { method: "POST" }); await loadDocs(); } catch { setError("Upload failed. Use a UTF-8 text or Markdown file."); } finally { setLoading(false); } };
-  const deleteDoc = async (id: string) => { if (!window.confirm("Delete this document and all indexed content?")) return; try { await api(`/api/v1/documents/${id}`, { method: "DELETE" }); await loadDocs(); } catch { setError("Couldn’t delete the document."); } };
-  const deleteConversation = async (id: string) => { if (!window.confirm("Delete this conversation?")) return; try { await api(`/api/v1/chat/conversations/${id}`, { method: "DELETE" }); setConversations((items) => items.filter((item) => item.id !== id)); if (conversationId === id) setConversationId(null); } catch { setError("Couldn’t delete the conversation."); } };
-  return <div className="app-shell">
-    <header className="topbar">
-      <div className="brand-mark">
-        <span>✦</span> Northstar</div>
-      <div className="topbar-actions">
-        <span className="status-dot">Connected</span>
-        <button className="avatar" onClick={onSignOut} aria-label="Sign out">U</button>
-      </div>
-    </header><div className="app-layout"><aside className="sidebar"><p className="eyebrow">Workspace</p><button className={`nav-item ${view === "chat" ? "active" : ""}`} onClick={() => setView("chat")}>⌁ &nbsp; Ask knowledge</button><button className={`nav-item ${view === "documents" ? "active" : ""}`} onClick={() => setView("documents")}>□ &nbsp; Documents <span className="nav-count">{docs.length}</span></button>{view === "chat" && <div className="conversation-nav"><button className="new-chat" onClick={() => setConversationId(null)}>+ New conversation</button>{conversations.map((item) => <div className={`conversation-item ${conversationId === item.id ? "selected" : ""}`} key={item.id}><button onClick={() => setConversationId(item.id)}>{item.title || "Untitled conversation"}</button><button className="delete-small" onClick={() => deleteConversation(item.id)} aria-label="Delete conversation">×</button></div>)}</div>}<div className="sidebar-bottom"><p className="eyebrow">Today</p><p className="sidebar-note">Your workspace is ready for a question.</p></div></aside><main className="content">{error && <div className="error-banner" role="alert">{error}</div>}{view === "chat" ? <Chat conversationId={conversationId} onConversationCreated={(id) => { setConversationId(id); loadConversations(); }} /> : <Documents docs={docs} loading={loading} upload={upload} onDelete={deleteDoc} />}</main></div></div>;
-}
-
-function Chat({ conversationId, onConversationCreated }: { conversationId: string | null; onConversationCreated: (id: string) => void }) { const [messages, setMessages] = useState<Message[]>([]); const [input, setInput] = useState(""); const [loading, setLoading] = useState(false); useEffect(() => { setMessages([]); }, [conversationId]); const send = async (e: FormEvent) => { e.preventDefault(); if (!input.trim() || loading) return; const text = input.trim(); setInput(""); setMessages((m) => [...m, { role: "user", content: text }]); setLoading(true); try { const reply = await api("/api/v1/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: text, conversation_id: conversationId }) }); onConversationCreated(reply.conversation_id); setMessages((m) => [...m, { role: "assistant", content: reply.content, citations: reply.citations }]); } finally { setLoading(false); } }; return <section className="chat-view"><div className="page-heading"><div><p className="eyebrow">Knowledge assistant</p><h2>What can I help you find?</h2><p className="muted">Ask about policies, processes, and product knowledge. Every answer keeps its sources close.</p></div><span className="source-pill">⌖ Tenant-scoped</span></div>{!messages.length ? <div className="starter-grid"><button onClick={() => setInput("What is our refund policy?")}><span>01</span><strong>Find a policy</strong><small>Get a concise answer with the source.</small></button><button onClick={() => setInput("Where should production secrets be stored?")}><span>02</span><strong>Locate a process</strong><small>Surface the right internal guidance.</small></button></div> : <div className="message-list">{messages.map((m, i) => <article className={`message ${m.role}`} key={`${m.role}-${i}`}><div className="message-label">{m.role === "user" ? "You" : "Northstar"}</div><Markdown content={m.content} />{m.citations?.length ? <div className="citations"><span className="citation-title">Sources</span>{m.citations.map((c) => <span className="citation" key={`${c.document_id}-${c.chunk_index}`}>↗ {c.filename} · section {c.chunk_index + 1}</span>)}</div> : null}</article>)}</div>}<form className="composer" onSubmit={send}><textarea aria-label="Ask a question" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask your workspace…" rows={2} disabled={loading} /><div className="composer-footer"><span className="composer-hint">Answers are grounded in indexed documents</span><button className="primary send" disabled={loading || !input.trim()}>{loading ? "Thinking…" : "Ask ↗"}</button></div></form></section>; }
-
-function Documents({ docs, loading, upload, onDelete }: { docs: Doc[]; loading: boolean; upload: (file: File) => void; onDelete: (id: string) => void }) { const pick = (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file) upload(file); e.currentTarget.value = ""; }; return <section><div className="page-heading"><div><p className="eyebrow">Knowledge base</p><h2>Your documents</h2><p className="muted">Upload text or Markdown to make it searchable by your workspace.</p></div><label className="primary upload-button">{loading ? "Processing…" : "Add document"}<input type="file" accept=".txt,.md,text/plain,text/markdown" disabled={loading} onChange={pick} /></label></div><div className="document-card">{loading && !docs.length ? <div className="empty-state"><div className="spinner" />Loading…</div> : !docs.length ? <div className="empty-state"><div className="empty-icon">□</div><h3>Your knowledge base is empty</h3><p>Add a text or Markdown file to start asking grounded questions.</p></div> : <div className="document-list">{docs.map((doc) => <div className="document-row" key={doc.id}><div className="file-icon">TXT</div><div className="document-name"><strong>{doc.original_filename}</strong><span>{Math.ceil(doc.size_bytes / 1024)} KB · {doc.status}</span></div><span className={`status status-${doc.status}`}>{doc.status}</span><button className="delete-document" onClick={() => onDelete(doc.id)} aria-label={`Delete ${doc.original_filename}`}>Delete</button></div>)}</div>}</div></section>; }
+export { api };
