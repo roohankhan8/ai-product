@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     database_url: str = "postgresql+asyncpg://devuser:devpassword@localhost:5433/devdb"
     redis_url: str = "redis://localhost:6379/0"
+    auth_secret: str = "local-development-auth-secret-change-me"
 
 
 @lru_cache

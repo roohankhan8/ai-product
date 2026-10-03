@@ -22,7 +22,9 @@ from exception_handlers import (
     unhandled_error_handler,
     validation_error_handler,
 )
+from routes.auth import router as auth_router
 from routes.health import router as health_router
+from routes.tenant import router as tenant_router
 
 settings = get_settings()
 configure_logging(settings.log_level)
@@ -49,6 +51,8 @@ app.add_exception_handler(StarletteHTTPException, http_error_handler)
 app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(Exception, unhandled_error_handler)
 app.include_router(health_router)
+app.include_router(auth_router)
+app.include_router(tenant_router)
 
 
 @app.middleware("http")

@@ -142,8 +142,16 @@ LLM_API_KEY=replace-me
 LLM_MODEL=replace-with-a-chat-model
 EMBEDDING_MODEL=replace-with-an-embedding-model
 
-JWT_SECRET=replace-with-a-long-random-development-secret
+AUTH_SECRET=replace-with-a-long-random-development-secret
 ```
+
+## Local authentication
+
+The initial local flow uses a signed bearer token. Seed a user in PostgreSQL, call
+`POST /auth/dev-login` with `{ "email": "user@example.com" }`, then send the returned
+token as `Authorization: Bearer <token>`. `GET /auth/me`, `GET /tenant/users`, and
+`GET /tenant/documents` are authenticated and tenant-scoped. This development flow is
+not a production identity provider; replace it with OIDC before production deployment.
 
 For production, provide secrets through a managed secret store rather than committing `.env` files.
 
