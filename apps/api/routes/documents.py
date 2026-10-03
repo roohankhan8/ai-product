@@ -16,6 +16,7 @@ from core.errors import APIError
 from database import get_db_session
 from models import AuditEvent, Document
 from storage import path_for, remove_file, save_bytes
+from rag import index_document
 
 router = APIRouter(prefix="/api/v1/documents", tags=["documents"])
 
@@ -45,6 +46,12 @@ class DocumentResponse(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+
+
+class IndexResponse(BaseModel):
+    document_id: uuid.UUID
+    chunk_count: int
+    status: str
 
 
 ALLOWED_TYPES = {
@@ -203,6 +210,23 @@ async def download_document(
         media_type=document.content_type or "application/octet-stream",
         filename=document.original_filename,
     )
+
+
+@router.post("/{document_id}/index", response_model=IndexResponse)
+async def index_uploaded_document(
+    document_id: uuid.UUID,
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_db_session),
+) -> IndexResponse:
+    document = await _get_document(document_id, principal, session)
+    try:
+        chunk_count = await index_document(session, document)
+        await session.commit()
+    except APIError:
+        document.status = "failed"
+        await session.commit()
+        raise
+    return IndexResponse(document_id=document.id, chunk_count=chunk_count, status=document.status)
 
 
 @router.patch("/{document_id}", response_model=DocumentResponse)

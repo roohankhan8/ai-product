@@ -190,6 +190,17 @@ For production, provide secrets through a managed secret store rather than commi
 
 Do not allow the LLM to modify the database directly. Tool calls must pass through application authorization, parameter validation, confirmation rules, and audit logging.
 
+## Baseline RAG
+
+After uploading a UTF-8 `.txt` or `.md` document, call
+`POST /api/v1/documents/{id}/index`. Chat retrieves top matching chunks from the
+authenticated user's tenant and returns citation metadata with the answer. The
+baseline uses deterministic local word vectors stored as JSON in PostgreSQL so it
+needs no new service. pgvector is the preferred next step for database-native
+indexed search; a hosted vector service is deferred because it adds operational
+and tenant-boundary complexity. PDF upload remains supported for storage and
+download, but PDF parsing/OCR is deferred.
+
 ## Development commands
 
 Expected commands as the project is implemented:
