@@ -23,6 +23,7 @@ from exception_handlers import (
     validation_error_handler,
 )
 from routes.auth import router as auth_router
+from routes.documents import router as documents_router
 from routes.health import router as health_router
 from routes.tenant import router as tenant_router
 
@@ -52,6 +53,7 @@ app.add_exception_handler(RequestValidationError, validation_error_handler)
 app.add_exception_handler(Exception, unhandled_error_handler)
 app.include_router(health_router)
 app.include_router(auth_router)
+app.include_router(documents_router)
 app.include_router(tenant_router)
 
 

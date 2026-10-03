@@ -1,4 +1,5 @@
 .env
+storage/
 .venv312
 ai_operations_api.egg-info
 alembic/__pycache__

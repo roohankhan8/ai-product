@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://devuser:devpassword@localhost:5433/devdb"
     redis_url: str = "redis://localhost:6379/0"
     auth_secret: str = "local-development-auth-secret-change-me"
+    storage_dir: str = "./storage"
+    max_upload_bytes: int = 10 * 1024 * 1024
 
 
 @lru_cache

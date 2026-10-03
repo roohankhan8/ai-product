@@ -143,6 +143,8 @@ LLM_MODEL=replace-with-a-chat-model
 EMBEDDING_MODEL=replace-with-an-embedding-model
 
 AUTH_SECRET=replace-with-a-long-random-development-secret
+STORAGE_DIR=./storage
+MAX_UPLOAD_BYTES=10485760
 ```
 
 ## Local authentication
@@ -152,6 +154,14 @@ The initial local flow uses a signed bearer token. Seed a user in PostgreSQL, ca
 token as `Authorization: Bearer <token>`. `GET /auth/me`, `GET /tenant/users`, and
 `GET /tenant/documents` are authenticated and tenant-scoped. This development flow is
 not a production identity provider; replace it with OIDC before production deployment.
+
+Authenticated document metadata is available under `/api/v1/documents`. It supports
+list, create, detail, update, and delete operations.
+
+Upload a PDF, plain-text, or Markdown file with `POST /api/v1/documents/upload` using
+the multipart field `file`. Files are stored locally under `STORAGE_DIR`, limited by
+`MAX_UPLOAD_BYTES` (10 MiB by default), and can be downloaded through the authenticated
+`GET /api/v1/documents/{id}/download` endpoint.
 
 For production, provide secrets through a managed secret store rather than committing `.env` files.
 
