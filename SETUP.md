@@ -188,3 +188,63 @@ docker compose up --build
 - Test prompt injection, indirect injection, unauthorized tools, data leakage, malicious uploads, SSRF, and rate-limit abuse.
 
 For the complete product roadmap and architecture rationale, see [`IDEA.md`](IDEA.md).
+
+## First-time setup commands
+
+The repository is currently a scaffold. Run these commands from the repository root after cloning:
+
+```bash
+git clone <repository-url>
+cd ai-product
+python --version
+node --version
+npm --version
+docker --version
+docker compose version
+```
+
+When `.env.example` is added, create the local environment file. Use `cp .env.example .env` on macOS/Linux or Git Bash, and `Copy-Item .env.example .env` in Windows PowerShell. Never commit `.env` or real API keys.
+
+## Development workflow
+
+Use separate terminals once the corresponding project files exist:
+
+```bash
+# Terminal 1 - infrastructure
+docker compose up -d postgres redis
+
+# Terminal 2 - API
+cd apps/api
+python -m venv .venv
+```
+
+Activate the backend environment in Windows PowerShell with `.venv\Scripts\Activate.ps1`, or on macOS/Linux with `source .venv/bin/activate`, then run:
+
+```bash
+pip install -e ".[dev]"
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000
+```
+
+In a third terminal, start the web app:
+
+```bash
+cd apps/web
+npm ci
+npm run dev
+```
+
+Use `npm install` only when intentionally changing dependencies and regenerating `package-lock.json`. Put `NEXT_PUBLIC_API_URL=http://localhost:8000` in `apps/web/.env.local`.
+
+Check the API at `http://localhost:8000/health`, `http://localhost:8000/ready`, and `http://localhost:8000/docs`. Stop local services with `docker compose down`.
+
+## Current scaffold check
+
+Until the API, frontend, and Compose files are added, validate the checkout with:
+
+```bash
+git status
+git ls-files
+```
+
+Do not expect `pytest`, `uvicorn`, `npm run dev`, or `docker compose up` to work until their corresponding project files have been added.
