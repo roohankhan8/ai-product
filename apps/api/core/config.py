@@ -19,6 +19,11 @@ class Settings(BaseSettings):
     auth_secret: str = "local-development-auth-secret-change-me"
     storage_dir: str = "./storage"
     max_upload_bytes: int = 10 * 1024 * 1024
+    llm_provider: Literal["mock", "openai_compatible", "gemini"] = "gemini"
+    llm_api_key: str | None = None
+    llm_model: str = "gemini-2.0-flash"
+    llm_base_url: str = "https://generativelanguage.googleapis.com/v1beta/models"
+    llm_timeout_seconds: float = 30.0
 
 
 @lru_cache

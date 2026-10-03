@@ -145,6 +145,11 @@ EMBEDDING_MODEL=replace-with-an-embedding-model
 AUTH_SECRET=replace-with-a-long-random-development-secret
 STORAGE_DIR=./storage
 MAX_UPLOAD_BYTES=10485760
+LLM_PROVIDER=gemini
+LLM_API_KEY=replace-with-your-gemini-api-key
+LLM_MODEL=gemini-2.0-flash
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/models
+LLM_TIMEOUT_SECONDS=30
 ```
 
 ## Local authentication
@@ -162,6 +167,11 @@ Upload a PDF, plain-text, or Markdown file with `POST /api/v1/documents/upload` 
 the multipart field `file`. Files are stored locally under `STORAGE_DIR`, limited by
 `MAX_UPLOAD_BYTES` (10 MiB by default), and can be downloaded through the authenticated
 `GET /api/v1/documents/{id}/download` endpoint.
+
+Basic chat is available at `POST /api/v1/chat` with `{ "message": "..." }`. Select
+the provider with `LLM_PROVIDER=gemini`, `LLM_PROVIDER=mock`, or
+`LLM_PROVIDER=openai_compatible`. Gemini uses `LLM_API_KEY`, `LLM_MODEL`, and
+`LLM_BASE_URL`; the mock provider requires no API key.
 
 For production, provide secrets through a managed secret store rather than committing `.env` files.
 
