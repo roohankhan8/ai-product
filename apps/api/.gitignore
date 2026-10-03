@@ -1,2 +1,4 @@
+.env
 .venv
 ai_operations_api.egg-info
+alembic/__pycache__

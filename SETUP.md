@@ -52,7 +52,7 @@ When the Docker Compose configuration is added, local development should use:
 
 | Service | Purpose | Default address |
 |---|---|---|
-| PostgreSQL | Relational application data | `localhost:5432` |
+| PostgreSQL | Relational application data | `localhost:5433` |
 | Redis | Cache, queue, and rate limits | `localhost:6379` |
 | API | FastAPI backend | `http://localhost:8000` |
 | Web | Next.js frontend | `http://localhost:3000` |
@@ -134,7 +134,7 @@ Suggested initial variables:
 APP_ENV=development
 LOG_LEVEL=INFO
 
-DATABASE_URL=postgresql+asyncpg://app:app@localhost:5432/ai_operations
+DATABASE_URL=postgresql+asyncpg://app:app@localhost:5433/ai_operations
 REDIS_URL=redis://localhost:6379/0
 
 LLM_API_KEY=replace-me
@@ -194,8 +194,6 @@ For the complete product roadmap and architecture rationale, see [`IDEA.md`](IDE
 The repository is currently a scaffold. Run these commands from the repository root after cloning:
 
 ```bash
-git clone <repository-url>
-cd ai-product
 python --version
 node --version
 npm --version
