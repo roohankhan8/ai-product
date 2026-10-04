@@ -122,3 +122,21 @@ async def retrieve(session: AsyncSession, tenant_id: uuid.UUID, query: str, top_
         if score >= 0.18:
             scored.append(RetrievedChunk(chunk, score))
     return sorted(scored, key=lambda item: item.score, reverse=True)[:top_k]
+
+
+async def retrieve_document(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    document_id: uuid.UUID,
+    top_k: int = 5,
+) -> list[RetrievedChunk]:
+    rows = await session.scalars(
+        select(DocumentChunk)
+        .where(
+            DocumentChunk.tenant_id == tenant_id,
+            DocumentChunk.document_id == document_id,
+        )
+        .order_by(DocumentChunk.chunk_index.asc())
+        .limit(top_k)
+    )
+    return [RetrievedChunk(chunk, 1.0) for chunk in rows]
