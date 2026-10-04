@@ -55,6 +55,7 @@ class GeminiProvider(ChatProvider):
         settings = get_settings()
         if not settings.llm_api_key:
             raise APIError(503, "llm_not_configured", "LLM provider is not configured")
+        system_messages = [message.content for message in messages if message.role == "system"]
         contents = [
             {
                 "role": "model" if item.role == "assistant" else "user",
@@ -69,7 +70,18 @@ class GeminiProvider(ChatProvider):
                 response = await client.post(
                     url,
                     params={"key": settings.llm_api_key},
-                    json={"contents": contents},
+                    json={
+                        "contents": contents,
+                        **(
+                            {
+                                "systemInstruction": {
+                                    "parts": [{"text": "\n\n".join(system_messages)}]
+                                }
+                            }
+                            if system_messages
+                            else {}
+                        ),
+                    },
                 )
                 response.raise_for_status()
                 data = response.json()

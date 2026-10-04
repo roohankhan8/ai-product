@@ -7,6 +7,7 @@ the embedding and search seams with pgvector or a hosted service after evaluatio
 import re
 import unicodedata
 import uuid
+from io import BytesIO
 from hashlib import blake2b
 from dataclasses import dataclass
 from math import sqrt
@@ -14,6 +15,8 @@ from pathlib import PurePath
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from pypdf import PdfReader
+from pypdf.errors import PdfReadError
 
 from core.errors import APIError
 from models import Document, DocumentChunk
@@ -36,12 +39,20 @@ class RetrievedChunk:
 
 def parse_text(filename: str, content: bytes) -> str:
     suffix = PurePath(filename).suffix.lower()
-    if suffix not in {".txt", ".md"}:
-        raise APIError(415, "unsupported_parser_format", "Only text and Markdown parsing is supported")
-    try:
-        text = content.decode("utf-8-sig")
-    except UnicodeDecodeError as exc:
-        raise APIError(422, "invalid_text_encoding", "Document must be valid UTF-8 text") from exc
+    if suffix == ".pdf":
+        try:
+            text = "\n".join(page.extract_text() or "" for page in PdfReader(BytesIO(content)).pages)
+        except (ImportError, OSError, ValueError, PdfReadError) as exc:
+            raise APIError(422, "invalid_pdf", "PDF could not be read") from exc
+        if not text.strip():
+            raise APIError(422, "empty_pdf_text", "PDF does not contain extractable text")
+    elif suffix in {".txt", ".md"}:
+        try:
+            text = content.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise APIError(422, "invalid_text_encoding", "Document must be valid UTF-8 text") from exc
+    else:
+        raise APIError(415, "unsupported_parser_format", "Only PDF, text, and Markdown parsing is supported")
     normalized = unicodedata.normalize("NFKC", text).replace("\r\n", "\n").replace("\r", "\n")
     return "\n".join(line.rstrip() for line in normalized.splitlines()).strip()
 

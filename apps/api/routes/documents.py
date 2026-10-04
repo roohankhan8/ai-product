@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.auth import Principal
@@ -133,6 +133,18 @@ async def upload_document(
     original_filename = Path(file.filename or "upload").name
     if not original_filename or Path(original_filename).suffix.lower() != expected_suffix:
         raise APIError(415, "file_extension_mismatch", "File extension does not match its type")
+    duplicate = await session.scalar(
+        select(Document.id).where(
+            Document.tenant_id == principal.tenant_id,
+            func.lower(Document.original_filename) == original_filename.lower(),
+        )
+    )
+    if duplicate is not None:
+        raise APIError(
+            409,
+            "duplicate_filename",
+            "A document with this filename already exists in the workspace",
+        )
 
     content = await file.read(get_settings().max_upload_bytes + 1)
     if len(content) > get_settings().max_upload_bytes:

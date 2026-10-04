@@ -5,18 +5,18 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.auth import Principal, issue_token
+from core.auth import Principal, issue_token, verify_password
 from core.dependencies import get_current_principal
 from core.errors import APIError
-from core.config import get_settings
 from database import get_db_session
-from models import AuditEvent, Tenant, User
+from models import AuditEvent, User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 class DevLoginRequest(BaseModel):
     email: EmailStr
+    password: str
 
 
 class TokenResponse(BaseModel):
@@ -38,22 +38,8 @@ async def dev_login(
     session: AsyncSession = Depends(get_db_session),
 ) -> TokenResponse:
     user = await session.scalar(select(User).where(User.email == request.email.lower()))
-    if user is None and get_settings().app_env == "development":
-        tenant = await session.scalar(select(Tenant).where(Tenant.slug == "local-workspace"))
-        if tenant is None:
-            tenant = Tenant(name="Local Workspace", slug="local-workspace")
-            session.add(tenant)
-            await session.flush()
-        user = User(
-            tenant_id=tenant.id,
-            email=request.email.lower(),
-            display_name=request.email.split("@", 1)[0],
-            role="owner",
-        )
-        session.add(user)
-        await session.flush()
-    if user is None or not user.is_active:
-        raise APIError(401, "invalid_credentials", "Invalid credentials")
+    if user is None or not user.is_active or not verify_password(request.password, user.password_hash):
+        raise APIError(401, "invalid_credentials", "Invalid email or password")
     session.add(
         AuditEvent(
             tenant_id=user.tenant_id,
@@ -62,12 +48,32 @@ async def dev_login(
             resource_type="user",
             resource_id=str(user.id),
             request_id=getattr(request_context.state, "request_id", None),
-            details={"method": "dev-login"},
+            details={"method": "password"},
         )
     )
     await session.commit()
     principal = Principal(user.id, user.tenant_id, user.role, user.email)
     return TokenResponse(access_token=issue_token(principal))
+
+
+@router.post("/logout", status_code=204)
+async def logout(
+    request_context: Request,
+    principal: Principal = Depends(get_current_principal),
+    session: AsyncSession = Depends(get_db_session),
+) -> None:
+    session.add(
+        AuditEvent(
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            action="auth.logout",
+            resource_type="user",
+            resource_id=str(principal.user_id),
+            request_id=getattr(request_context.state, "request_id", None),
+            details={},
+        )
+    )
+    await session.commit()
 
 
 @router.get("/me", response_model=PrincipalResponse)

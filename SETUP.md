@@ -167,8 +167,17 @@ LLM_TIMEOUT_SECONDS=30
 
 ## Local authentication
 
-The initial local flow uses a signed bearer token. Seed a user in PostgreSQL, call
-`POST /auth/dev-login` with `{ "email": "user@example.com" }`, then send the returned
+The initial local flow uses a signed bearer token. After running the migrations, seed the
+local admin user from `apps/api`:
+
+```bash
+python scripts/seed_admin.py
+```
+
+Set `ADMIN_PASSWORD` when seeding to choose the password. The command is idempotent and
+creates `admin@example.com` in the `local-workspace` tenant with the `admin` role. The
+frontend can then call `POST /auth/dev-login` with
+`{ "email": "admin@example.com", "password": "your-password" }`, then send the returned
 token as `Authorization: Bearer <token>`. `GET /auth/me`, `GET /tenant/users`, and
 `GET /tenant/documents` are authenticated and tenant-scoped. This development flow is
 not a production identity provider; replace it with OIDC before production deployment.

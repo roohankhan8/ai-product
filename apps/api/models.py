@@ -63,6 +63,7 @@ class User(TimestampMixin, Base):
         Uuid, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
     )
     email: Mapped[str] = mapped_column(String(320), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(256), nullable=False)
     display_name: Mapped[str] = mapped_column(String(160), nullable=False)
     role: Mapped[str] = mapped_column(
         String(32), nullable=False, server_default=text("'member'")
