@@ -195,7 +195,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Done when:** A user can complete the core document-to-cited-answer flow and approve/reject a pending action through the UI.
 
-### 13. Security hardening
+### 13. Security hardening X
 
 **Scope:** Test the trust boundaries identified by `IDEA.md` against concrete abuse cases.
 

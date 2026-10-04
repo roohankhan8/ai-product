@@ -164,7 +164,7 @@ This is a compact development mechanism, not a production OIDC/session implement
 
 ### `apps/api/core/dependencies.py`
 
-Defines the FastAPI authentication dependency. It reads an HTTP bearer credential, rejects missing or non-bearer credentials, and delegates validation to `decode_token()`.
+Defines the FastAPI authentication dependency. It reads an HTTP bearer credential, rejects missing or non-bearer credentials, verifies the signed token, then re-queries the active user by both user and tenant ID. Current role and email values come from PostgreSQL rather than stale token claims, so deactivation or role changes take effect without waiting for token expiry.
 
 Routes use `Depends(get_current_principal)` to make authentication explicit and consistent.
 
@@ -460,7 +460,13 @@ Chat request
 
 The tenant predicate is applied before scoring. It is not a prompt-level instruction and therefore does not depend on model compliance.
 
+The API middleware also emits baseline browser security headers (`nosniff`, frame denial, restrictive referrer policy, and a disabled permissions policy) on responses.
+
+`apps/api/core/rate_limit.py` provides shared Redis counters for login, chat, uploads, and approval routes, with a bounded in-memory fallback when Redis is unavailable. This keeps limits consistent across API processes while preserving local startup behavior.
+
 The chat route now uses a bounded manual tool loop for document metadata and ordinary knowledge questions. It permits at most three tool calls per request and writes redacted tool metadata (name, status, and safe error code) to the tenant audit log. Model frameworks, write tools, approvals, and MCP are intentionally outside this phase.
+
+If the model proposes `task.create`, chat validates the proposal and persists a pending approval instead of executing it. The task can only be created later through the administrator-protected approval execution route.
 
 ## Current intentional limitations
 
@@ -472,6 +478,8 @@ The chat route now uses a bounded manual tool loop for document metadata and ord
 - The worker is a simple single-process Redis consumer; production deployment needs process supervision, concurrency controls, metrics, and recovery runbooks.
 - The frontend has a development sign-in and local-storage token model, not a production session/identity integration.
 - Streaming chat, evaluation persistence, hybrid search, reranking, tools, approvals, production identity, observability, and MCP remain later phases.
+
+Security controls and remaining production requirements are summarized in [`docs/security-boundaries.md`](docs/security-boundaries.md). Phase 13 is complete for the current development slice; managed identity, malware scanning, dependency scanning, and security regression coverage remain production prerequisites.
 
 ## Useful commands
 

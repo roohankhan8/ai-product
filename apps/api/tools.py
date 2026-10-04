@@ -27,6 +27,11 @@ class SearchKnowledgeArgs(BaseModel):
     top_k: int = Field(default=5, ge=1, le=10)
 
 
+class TaskCreateArgs(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=5000)
+
+
 class ToolProposal(BaseModel):
     name: str
     arguments: dict[str, Any] = {}

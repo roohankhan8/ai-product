@@ -15,6 +15,7 @@ from starlette.responses import Response
 from core.config import get_settings
 from core.errors import APIError
 from core.logging import configure_logging
+from core.rate_limit import allow_request
 from core.request_context import request_id_context
 from database import dispose_database
 from exception_handlers import (
@@ -74,6 +75,22 @@ app.include_router(tenant_router)
 async def add_request_context(
     request: Request, call_next: RequestResponseEndpoint
 ) -> Response:
+    limits = {
+        "/auth/dev-login": (10, 300),
+        "/api/v1/chat": (60, 60),
+        "/api/v1/documents/upload": (20, 300),
+        "/api/v1/approvals": (60, 60),
+    }
+    matched = next((item for path, item in limits.items() if request.url.path == path), None)
+    if matched:
+        client = request.client.host if request.client else "unknown"
+        if not await allow_request(f"{client}:{request.url.path}", *matched):
+            return Response(
+                content='{"error":{"code":"rate_limited","message":"Too many requests"}}',
+                status_code=429,
+                media_type="application/json",
+                headers={"Retry-After": str(matched[1])},
+            )
     incoming_id = request.headers.get("X-Request-ID", "")
     request_id = (
         incoming_id
@@ -87,6 +104,12 @@ async def add_request_context(
     try:
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if settings.app_env == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         logger.info(
             "request completed",
             extra={
