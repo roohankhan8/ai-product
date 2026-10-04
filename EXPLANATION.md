@@ -226,6 +226,12 @@ Owns the durable ingestion job lifecycle.
 
 The job is idempotent because indexing deletes and replaces all chunks for the document and the database allows only one job row per document.
 
+### `apps/api/tools.py`
+
+Defines the first controlled-tool seam for Phase 9. `ToolSpec` describes a tool's name, arguments model, handler, required roles, and read-only status. `ToolRegistry` validates arguments, checks the authenticated principal's role, and applies a five-second execution timeout. The initial `list_documents` and `search_knowledge` tools always filter by the principal's tenant and expose no write operation.
+
+`parse_tool_proposal` accepts only a small JSON envelope from a model. The route executes a valid proposal through the same registry, then asks the provider for a final answer. Providers that return ordinary text continue through the existing fallback path.
+
 ### `apps/api/worker.py`
 
 The standalone Redis worker process. It blocks on `document-ingestion`, parses job payloads, opens an async database session, and delegates processing to `process_job()`. Start it from `apps/api` with `python -m worker`.
@@ -440,6 +446,8 @@ Chat request
 ```
 
 The tenant predicate is applied before scoring. It is not a prompt-level instruction and therefore does not depend on model compliance.
+
+The chat route now uses a bounded manual tool loop for document metadata and ordinary knowledge questions. It permits at most three tool calls per request and writes redacted tool metadata (name, status, and safe error code) to the tenant audit log. Model frameworks, write tools, approvals, and MCP are intentionally outside this phase.
 
 ## Current intentional limitations
 
