@@ -22,6 +22,14 @@ export type Message = {
   content: string;
   citations?: Citation[];
 };
+export type Approval = {
+  id: string;
+  action: string;
+  status: "pending" | "approved" | "rejected" | "executed" | "expired";
+  arguments: Record<string, string>;
+  expires_at: string;
+  idempotency_key: string;
+};
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 

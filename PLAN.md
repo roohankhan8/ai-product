@@ -145,7 +145,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Done when:** A repeatable evaluation command compares a change with the baseline and can detect material retrieval or citation regressions.
 
-### 9. Controlled tools and manual agent loop
+### 9. Controlled tools and manual agent loop X
 
 **Scope:** Let the model propose tool calls while application code retains control.
 
@@ -158,7 +158,7 @@ The Postgres host mapping to port `5433` is intentional and should be preserved.
 
 **Done when:** Tool calls cannot bypass application authorization and every call is bounded and auditable.
 
-### 10. Human approval for consequential actions
+### 10. Human approval for consequential actions X
 
 **Scope:** Add approval as a persisted workflow state before enabling write tools.
 

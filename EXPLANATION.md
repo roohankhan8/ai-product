@@ -288,6 +288,10 @@ The chat route creates or retrieves a tenant-owned conversation, loads message h
 
 The source text is framed as data rather than instructions. The LLM is not granted direct database or tool access.
 
+### `apps/api/routes/approvals.py`
+
+Owns the Phase 10 approval boundary. Authenticated users can propose only `task.create`, list tenant-owned proposals, and inspect their lifecycle. Workspace administrators can approve or reject pending proposals, and only an administrator can execute an approved proposal. Requests expire after one hour and carry a unique idempotency key; execution creates the task in the same transaction, marks the approval executed, and records an audit event. Persisted status checks prevent repeated approval or execution.
+
 ## Database migrations
 
 ### `apps/api/alembic.ini`
@@ -326,6 +330,14 @@ Adds password hashes for the local authentication flow and backfills existing us
 
 Adds the current tenant-scoped uniqueness rule for document filenames.
 
+### `0006_approval_requests.py`
+
+Adds tenant-owned approval requests with action arguments, lifecycle status, decision identity/timestamp, execution timestamp, and status indexes.
+
+### `0007_approval_expiration.py`
+
+Adds one-hour approval expiration, a unique execution idempotency key, and an expiration index.
+
 ## Evaluation and developer scripts
 
 ### `evals/rag-baseline-v1.json`
@@ -354,6 +366,7 @@ The current client-side product surface.
 - `Home` selects between sign-in and the authenticated workspace based on local storage.
 - `SignIn` calls `/auth/dev-login`, handles loading/error state, and stores the returned token.
 - `Workspace` provides chat/documents navigation, document loading, upload/indexing, sign-out, and shared error handling.
+- `Workspace` also exposes an approvals view that lists tenant-owned action proposals and lets authorized users approve, reject, or execute them through the Phase 10 API.
 - `Chat` renders starter prompts, conversation messages, a composer, citations, loading state, and retry messaging.
 - `Documents` renders upload controls, empty/loading/error states, document metadata, and processing/ready status badges.
 

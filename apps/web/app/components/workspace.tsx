@@ -2,11 +2,11 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { api, Conversation, Document, Message } from "../lib/api";
+import { api, Approval, Conversation, Document, Message } from "../lib/api";
 import { MarkdownContent } from "./markdown-content";
 
 export function Workspace({ onSignOut }: { onSignOut: () => void }) {
-  const [view, setView] = useState<"chat" | "documents">("chat");
+  const [view, setView] = useState<"chat" | "documents" | "approvals">("chat");
   const [documents, setDocuments] = useState<Document[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -15,6 +15,7 @@ export function Workspace({ onSignOut }: { onSignOut: () => void }) {
   const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [approvals, setApprovals] = useState<Approval[]>([]);
   const logout = async () => {
     try {
       await api("/auth/logout", { method: "POST" });
@@ -40,9 +41,17 @@ export function Workspace({ onSignOut }: { onSignOut: () => void }) {
       setError("Couldn’t load conversations.");
     }
   };
+  const loadApprovals = async () => {
+    try {
+      setApprovals(await api("/api/v1/approvals"));
+    } catch {
+      setError("Couldnâ€™t load approvals.");
+    }
+  };
   useEffect(() => {
     loadDocuments();
     loadConversations();
+    loadApprovals();
   }, []);
   useEffect(() => {
     if (!documents.some((document) => ["uploaded", "processing"].includes(document.status))) {
@@ -114,6 +123,12 @@ export function Workspace({ onSignOut }: { onSignOut: () => void }) {
             Documents{" "}
             <span className="ml-1 rounded-full bg-[#e4f2ee] px-1.5 text-[10px]">
               {documents.length}
+            </span>
+            </TopNavButton>
+          <TopNavButton active={view === "approvals"} onClick={() => setView("approvals")}>
+            Approvals{" "}
+            <span className="ml-1 rounded-full bg-[#f8e8df] px-1.5 text-[10px]">
+              {approvals.filter((item) => item.status === "pending").length}
             </span>
           </TopNavButton>
         </nav>
@@ -204,12 +219,12 @@ export function Workspace({ onSignOut }: { onSignOut: () => void }) {
               }}
             />
           ) : (
-            <Documents
+            view === "documents" ? <Documents
               documents={documents}
               loading={loading}
               upload={upload}
               onDelete={(document) => setDocumentToDelete(document)}
-            />
+            /> : <Approvals approvals={approvals} reload={loadApprovals} />
           )}
         </main>
       </div>
@@ -288,6 +303,41 @@ export function Workspace({ onSignOut }: { onSignOut: () => void }) {
         </div>
       )}
     </div>
+  );
+}
+
+function Approvals({ approvals, reload }: { approvals: Approval[]; reload: () => Promise<void> }) {
+  const transition = async (id: string, action: "approve" | "reject" | "execute") => {
+    await api(`/api/v1/approvals/${id}/${action}`, { method: "POST" });
+    await reload();
+  };
+  return (
+    <section className="mx-auto max-w-4xl">
+      <div className="mb-8 pt-2">
+        <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[.13em] text-[#087f73]">Governance</p>
+        <h1 className="text-4xl font-bold tracking-[-.06em] md:text-5xl">Approval queue</h1>
+        <p className="mt-3 text-[#6b7d80]">Review proposed actions before they change workspace data.</p>
+      </div>
+      <div className="overflow-hidden rounded-xl border border-[#dce8e5] bg-white">
+        {!approvals.length ? <div className="p-10 text-center text-[#6b7d80]">No approval requests yet.</div> : approvals.map((item) => (
+          <div className="border-b border-[#edf3f1] p-5 last:border-0" key={item.id}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <strong className="block text-[#17323a]">{item.action}</strong>
+                <span className="text-sm text-[#6b7d80]">{item.arguments.title || "Untitled action"}</span>
+              </div>
+              <span className="rounded-full bg-[#eaf5f1] px-2.5 py-1 text-xs font-bold text-[#056259]">{capitalize(item.status)}</span>
+            </div>
+            <p className="mt-2 text-xs text-[#8aa09d]">Expires {new Date(item.expires_at).toLocaleString()}</p>
+            {item.status === "pending" && <div className="mt-4 flex gap-2">
+              <button className="rounded-lg bg-[#087f73] px-3 py-2 text-xs font-bold text-white" onClick={() => transition(item.id, "approve")}>Approve</button>
+              <button className="rounded-lg border border-[#edc6bd] bg-[#fff7f5] px-3 py-2 text-xs font-bold text-[#a14d40]" onClick={() => transition(item.id, "reject")}>Reject</button>
+            </div>}
+            {item.status === "approved" && <button className="mt-4 rounded-lg bg-[#087f73] px-3 py-2 text-xs font-bold text-white" onClick={() => transition(item.id, "execute")}>Execute task</button>}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

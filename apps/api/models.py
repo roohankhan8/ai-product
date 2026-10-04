@@ -253,3 +253,32 @@ class AuditEvent(Base):
         Index("ix_audit_events_tenant_created", "tenant_id", "created_at"),
         Index("ix_audit_events_request_id", "request_id"),
     )
+
+
+class ApprovalRequest(TimestampMixin, Base):
+    __tablename__ = "approval_requests"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False
+    )
+    requested_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    action: Mapped[str] = mapped_column(String(100), nullable=False)
+    arguments: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, server_default=text("'pending'"))
+    decided_by_user_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("users.id"))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected', 'executed', 'expired')",
+            name="valid_status",
+        ),
+        Index("ix_approval_requests_tenant_status", "tenant_id", "status"),
+        Index("ix_approval_requests_tenant_expires", "tenant_id", "expires_at"),
+    )
