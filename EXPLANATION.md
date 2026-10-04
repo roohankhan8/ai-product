@@ -32,6 +32,20 @@ The current user journey is:
 
 PDF files are currently accepted for storage and download, but parsing/OCR is intentionally deferred. The baseline embedding and retrieval implementation is local and deterministic; it is a learning-oriented baseline, not yet a production-scale vector index.
 
+## Current status and what is next
+
+The repository is past the initial scaffold. The current vertical slice includes FastAPI health/readiness and error handling, PostgreSQL models and migrations, development password login, tenant-scoped document access, local storage, Redis-backed ingestion with retries, deterministic baseline retrieval, cited chat, conversation history, unanswered-question tracking, and a Next.js workspace.
+
+The next work should be:
+
+1. Verify the existing slice end to end from a clean local setup: migrations, API, worker, web build, upload/index, and cited chat.
+2. Add automated verification and a minimal CI gate around authentication, tenant isolation, upload/index failure paths, health/readiness, and retrieval.
+3. Harden the trust boundaries before adding agents: production identity/session handling, upload and prompt-injection threat cases, rate limits, authorization checks, and sensitive-data redaction.
+4. Add operational visibility for queue health, model latency/usage, retrieval results, and provider or worker failures.
+5. Then implement read-only typed tools and a bounded manual agent loop; side-effecting tools should wait for persisted human approval.
+
+This order keeps the document-to-cited-answer flow reliable and makes future agent, approval, and MCP features reuse the same application authorization and audit boundaries.
+
 ## Root documentation and configuration
 
 ### `AGENTS.md`
@@ -224,9 +238,12 @@ The current worker is intentionally one-process/one-loop. Concurrency limits and
 
 Provides the development authentication flow:
 
-- `POST /auth/dev-login` accepts an email and returns a bearer token for an existing active user.
-- In `development`, a missing email is auto-provisioned into a local workspace as an owner. This keeps the local UI usable without a manual seed step; it must not be treated as production authentication.
+- `POST /auth/dev-login` accepts an email and password and returns a bearer token for an existing active user.
+- `POST /auth/logout` records a logout audit event.
+- `apps/api/scripts/seed_admin.py` creates or updates the local admin user using a scrypt password hash.
 - `GET /auth/me` returns the current principal.
+
+This remains development authentication; production still needs a secure session or identity-provider integration.
 
 Login writes an audit event. User lookup and tenant creation happen through the database session.
 
@@ -259,9 +276,9 @@ Upload cleanup removes the stored file if the database transaction fails. This p
 
 ### `apps/api/routes/chat.py`
 
-Provides `POST /api/v1/chat`.
+Provides conversation and chat endpoints: list/delete conversations, list messages, list unanswered questions, and `POST /api/v1/chat`.
 
-The route creates or retrieves a tenant-owned conversation, loads message history, retrieves tenant-filtered chunks, constructs a system instruction containing untrusted source context, calls the selected chat provider, persists user and assistant messages, writes an audit event, and returns the answer plus citation metadata.
+The chat route creates or retrieves a tenant-owned conversation, loads message history, retrieves tenant-filtered chunks, constructs a system instruction containing untrusted source context, calls the selected chat provider, persists messages, writes audit events, records unanswered questions when retrieval is insufficient, and returns the answer plus citation metadata.
 
 The source text is framed as data rather than instructions. The LLM is not granted direct database or tool access.
 
@@ -294,6 +311,14 @@ Adds tenant-owned `document_chunks` with document position uniqueness, content, 
 ### `0003_ingestion_jobs.py`
 
 Adds durable ingestion job state, attempts, retry timing, errors, tenant/document foreign keys, the unique document idempotency constraint, and the status/availability index used by workers and operators.
+
+### `0004_user_password.py`
+
+Adds password hashes for the local authentication flow and backfills existing users with an unusable value.
+
+### `0005_unique_document_filename.py`
+
+Adds the current tenant-scoped uniqueness rule for document filenames.
 
 ## Evaluation and developer scripts
 
@@ -425,7 +450,7 @@ The tenant predicate is applied before scoring. It is not a prompt-level instruc
 - Vector search is application-side JSON scoring and will not scale like pgvector/ANN search.
 - The worker is a simple single-process Redis consumer; production deployment needs process supervision, concurrency controls, metrics, and recovery runbooks.
 - The frontend has a development sign-in and local-storage token model, not a production session/identity integration.
-- Streaming chat, evaluation persistence, hybrid search, reranking, tools, approvals, and MCP remain later phases.
+- Streaming chat, evaluation persistence, hybrid search, reranking, tools, approvals, production identity, observability, and MCP remain later phases.
 
 ## Useful commands
 
@@ -457,4 +482,3 @@ From the repository root:
 ```powershell
 python scripts\evaluate_rag.py
 ```
-

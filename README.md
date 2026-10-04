@@ -6,11 +6,14 @@ The project is being implemented in stages. See [`IDEA.md`](IDEA.md) for the pro
 
 ## Current status
 
-- FastAPI starter with `/health` and `/ready` endpoints
+- FastAPI API with `/health` and `/ready`, structured errors, request IDs, and development authentication
 - PostgreSQL 16 and Redis 7 in Docker Compose
-- Async SQLAlchemy persistence and an initial Alembic schema migration
-- Next.js starter app
-- Alembic migration scaffolding
+- Async SQLAlchemy persistence with tenant-scoped models and five Alembic migrations
+- Password-protected development login and seeded admin support
+- Document upload, local storage, durable Redis ingestion, retry handling, and baseline retrieval with citations
+- Next.js workspace for sign-in, chat, conversations, document upload, and indexing status
+
+The next milestone is verification and hardening of this document-to-cited-answer slice: CI checks, tenant/auth security cases, operational visibility, and production-ready session handling. Controlled agent tools come after that foundation.
 
 ## Quick start
 
@@ -70,3 +73,5 @@ scripts/        Developer utilities
 ## Development
 
 Keep tenant authorization in application and data access code. Treat documents and model output as untrusted, and route every tool action through validation, authorization, and audit logging. Prefer deterministic provider fakes in tests so normal development does not require a live LLM key.
+
+The repository CI currently runs API linting plus web lint and build checks. Tests are intentionally not part of the current local workflow until the project explicitly enables them.
